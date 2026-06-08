@@ -1,5 +1,7 @@
 # RAG 知识库问答 Agent
 
+[![CI](https://github.com/retkoblue/rag-knowledge-agent/actions/workflows/ci.yml/badge.svg)](https://github.com/retkoblue/rag-knowledge-agent/actions/workflows/ci.yml)
+
 基于 **LangChain + LangGraph + Qdrant + FastAPI** 的检索增强生成(RAG)问答系统。
 上传文档 → 自动切块入向量库 → ReAct Agent 多步检索 + Function Calling + 多轮对话作答,并标注引用来源。
 

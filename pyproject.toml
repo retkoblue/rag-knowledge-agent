@@ -1,0 +1,5 @@
+[tool.pytest.ini_options]
+# 让 tests/ 能 import app 包(从项目根运行)
+pythonpath = ["."]
+testpaths = ["tests"]
+addopts = "-q"
