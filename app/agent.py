@@ -1,13 +1,16 @@
-"""LangGraph Agent:一个会"自己决定要不要查知识库"的工具调用 Agent。
+"""LangGraph ReAct Agent:一个会"自己决定要不要查知识库"的多步推理 Agent。
 
 和"裸 RAG"(每次都先检索再回答)不同,这里用 LangGraph 的 create_react_agent
-构建一个能 **工具调用(Function Calling)** 的 Agent:
+构建一个能 **多步 reasoning→action 循环** 的 ReAct Agent:
   - 它有两个工具:search_knowledge_base(查知识库)和 calculator(算数)。
   - 模型自己判断:要查资料就调 search,要算数就调 calculator,寒暄就直接答。
+  - 能链式调用:例如"每天多少任务?再除以8"→ 先 search 拿到 768,
+    观察结果后再 calculator(768/8)→ 综合作答。这就是真正的 ReAct 循环。
   - 支持多轮对话(用 thread_id 区分会话,记忆存在 checkpointer 里)。
-这对应 JD 里的 Tool-using / Function Calling / 上下文记忆。
-注:create_react_agent 框架本身支持多步 reasoning→action 循环,但多步推理链的
-稳定性取决于所用 LLM 能力;弱模型(如 glm-4-flash)以单步工具调用为主。
+这对应 JD 里的 ReAct / Tool-using / Function Calling / 上下文记忆。
+
+注:多步 ReAct 的稳定性依赖较强的 LLM。实测 glm-4-air / glm-4-plus 可稳定多步链式
+调用;免费的 glm-4-flash 工具规划能力不足,只适合单步,故默认用 glm-4-air。
 """
 from langchain_core.tools import tool
 from langchain_openai import ChatOpenAI
@@ -48,9 +51,17 @@ def calculator(expression: str) -> str:
 
 
 SYSTEM_PROMPT = (
-    "你是一个知识库问答助手。回答与用户文档相关的问题时,必须先调用 "
-    "search_knowledge_base 检索,再基于检索到的片段作答,并在末尾标注引用来源。"
-    "需要算数时调用 calculator。检索不到就如实说明,不要编造。"
+    "你是一个知识库问答助手,可以分多步使用工具来完成任务。\n"
+    "工具:\n"
+    "- search_knowledge_base(query):检索用户上传的文档,返回相关片段。\n"
+    "- calculator(expression):计算数学表达式。\n\n"
+    "工作方式(重要):\n"
+    "1. 任何涉及文档内容的事实,都必须先调用 search_knowledge_base 获取,绝不凭空编造。\n"
+    "2. 如果一个问题既需要文档里的事实、又需要对该事实做计算,你必须分两步:\n"
+    "   先调用 search_knowledge_base 拿到具体数字,看到检索结果后,\n"
+    "   再调用 calculator 用那个真实数字做计算。不要在没拿到数字前就调用 calculator。\n"
+    "3. 每次调用工具后,先阅读返回结果,再决定下一步是继续调用工具还是给出最终答案。\n"
+    "4. 最终回答要基于检索到的片段,并在末尾标注引用来源;检索不到就如实说明。"
 )
 
 
