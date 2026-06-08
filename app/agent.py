@@ -1,11 +1,13 @@
-"""LangGraph Agent:一个会"自己决定要不要查知识库"的 ReAct Agent。
+"""LangGraph Agent:一个会"自己决定要不要查知识库"的工具调用 Agent。
 
 和"裸 RAG"(每次都先检索再回答)不同,这里用 LangGraph 的 create_react_agent
 构建一个能 **工具调用(Function Calling)** 的 Agent:
   - 它有两个工具:search_knowledge_base(查知识库)和 calculator(算数)。
   - 模型自己判断:要查资料就调 search,要算数就调 calculator,寒暄就直接答。
   - 支持多轮对话(用 thread_id 区分会话,记忆存在 checkpointer 里)。
-这正好对应 JD 里的 ReAct / Tool-using / Multi-Agent / 上下文记忆。
+这对应 JD 里的 Tool-using / Function Calling / 上下文记忆。
+注:create_react_agent 框架本身支持多步 reasoning→action 循环,但多步推理链的
+稳定性取决于所用 LLM 能力;弱模型(如 glm-4-flash)以单步工具调用为主。
 """
 from langchain_core.tools import tool
 from langchain_openai import ChatOpenAI
